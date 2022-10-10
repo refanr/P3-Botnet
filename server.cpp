@@ -39,6 +39,7 @@
 #endif
 
 #define BACKLOG  5          // Allowed length of queue of waiting connections
+#define MAXSERVERS 16
 
 // Simple class for handling connections from clients.
 //
@@ -236,7 +237,8 @@ int main(int argc, char* argv[])
     fd_set openSockets;             // Current open sockets 
     fd_set readSockets;             // Socket list for select()        
     fd_set exceptSockets;           // Exception socket list
-    int maxfds;                     // Passed to select() as max fd in set
+    int maxfds;      
+    int maxConn = 0;               // Passed to select() as max fd in set
     struct sockaddr_in client;
     socklen_t clientLen;
     char buffer[1025];              // buffer for reading from clients
@@ -260,9 +262,12 @@ int main(int argc, char* argv[])
     else 
     // Add listen socket to socket set we are monitoring
     {
-        FD_ZERO(&openSockets);
-        FD_SET(listenSock, &openSockets);
-        maxfds = listenSock;
+        if (maxConn <= MAXSERVERS)
+        {
+            FD_ZERO(&openSockets);
+            FD_SET(listenSock, &openSockets);
+            maxfds = listenSock;
+        }
     }
 
     finished = false;
