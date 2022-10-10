@@ -40,6 +40,7 @@
 
 #define BACKLOG  5          // Allowed length of queue of waiting connections
 #define MAXSERVERS 16
+#define NAME "P3_Group_20"
 
 // Simple class for handling connections from clients.
 //
@@ -162,23 +163,43 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   // Split command from client into tokens for parsing
   std::stringstream stream(buffer);
 
-  while(stream >> token)
-      tokens.push_back(token);
+  while(std::getline(stream, token, ','))
+    {
+        //std::cout << token << std::endl;
+        tokens.push_back(token);
+    }
 
-  if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
+  if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
   {
-     clients[clientSocket]->name = tokens[1];
+     std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
   }
-  else if(tokens[0].compare("LEAVE") == 0)
+  else if(tokens[0].compare("SEND") == 0)
   {
       // Close the socket, and leave the socket handling
       // code to deal with tidying up clients etc. when
       // select() detects the OS has torn down the connection.
  
-      closeClient(clientSocket, openSockets, maxfds);
+     std::cout << "SEND: " <<  std::endl;
+     std::cout << "Group ID: " << tokens[1] << std::endl;
+     std::cout << "Message: ";
+     if (tokens.size() > 3)
+     {
+        for(int i=2;i<tokens.size();i++)
+        {
+            std::cout << tokens[i] << ", ";
+        }
+     }
+     else
+     {
+        std::cout << tokens[2] << std::endl;
+     }
+
+      //closeClient(clientSocket, openSockets, maxfds);
   }
-  else if(tokens[0].compare("WHO") == 0)
+  else if(tokens[0].compare("QUERYSERVERS") == 0)
   {
+     std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
+     
      std::cout << "Who is logged on" << std::endl;
      std::string msg;
 
@@ -252,7 +273,9 @@ int main(int argc, char* argv[])
     // Setup socket for server to listen to
 
     listenSock = open_socket(atoi(argv[1])); 
+    
     printf("Listening on port: %d\n", atoi(argv[1]));
+
 
     if(listen(listenSock, BACKLOG) < 0)
     {
