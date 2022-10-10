@@ -329,10 +329,19 @@ int main(int argc, char* argv[])
                       }
                   }
                }
-               // Remove client from the clients list
-               for(auto const& c : disconnectedClients)
-                  clients.erase(c->sock);
+                std::map<int, Client*>::iterator it = clients.begin();
+                for(std::pair<int, Client*> element : clients)
+                {
+                    int number = element.first;
+                    Client c = *element.second;
+                    std::cout << number << " :: " << c.name << std::endl;
+                }
+                // Remove client from the clients list
+                for(auto const& c : disconnectedClients)
+                    clients.erase(c->sock);
             }
         }
     }
+    
+    return 0;
 }
