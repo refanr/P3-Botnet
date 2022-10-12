@@ -163,6 +163,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   // Split command from client into tokens for parsing
   std::stringstream stream(buffer);
 
+<<<<<<< HEAD
   while(std::getline(stream, token, ','))
     {
         //std::cout << token << std::endl;
@@ -171,6 +172,14 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     // COMMANDS:  JOIN,
     // RESPONSES: SERVERS,
   if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
+=======
+  while(std::getline( stream, token, ',')){
+      std::cout << token << std::endl;
+      tokens.push_back(token);
+    }
+
+  if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
+>>>>>>> main
   {
      std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
      std::string reply = "Command: " + tokens[0] + " not implemented";
