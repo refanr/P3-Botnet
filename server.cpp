@@ -39,6 +39,8 @@
 #endif
 
 #define BACKLOG  5          // Allowed length of queue of waiting connections
+#define MAXSERVERS 16
+#define NAME "P3_Group_20"
 
 // Simple class for handling connections from clients.
 //
@@ -161,25 +163,63 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   // Split command from client into tokens for parsing
   std::stringstream stream(buffer);
 
+<<<<<<< HEAD
+  while(std::getline(stream, token, ','))
+    {
+        //std::cout << token << std::endl;
+        tokens.push_back(token);
+    }
+    // COMMANDS:  JOIN,
+    // RESPONSES: SERVERS,
+  if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
+=======
   while(std::getline( stream, token, ',')){
       std::cout << token << std::endl;
       tokens.push_back(token);
     }
 
   if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
+>>>>>>> main
   {
-     clients[clientSocket]->name = tokens[1];
+     std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
+     std::string reply = "Command: " + tokens[0] + " not implemented";
+     send(clientSocket, reply.c_str(), reply.length()-1, 0);
   }
-  else if(tokens[0].compare("LEAVE") == 0)
+    else if(tokens[0].compare("JOIN") == 0)
+    {
+        std::cout << "Command " << tokens[0] << " not implemented." << std::endl;
+    }
+    else if(tokens[0].compare("SERVERS") == 0)
+    {
+        std::cout << "Command " << tokens[0] << " not implemented." << std::endl;
+    }
+  else if(tokens[0].compare("SEND") == 0)
   {
       // Close the socket, and leave the socket handling
       // code to deal with tidying up clients etc. when
       // select() detects the OS has torn down the connection.
  
-      closeClient(clientSocket, openSockets, maxfds);
+     std::cout << "SEND: " <<  std::endl;
+     std::cout << "Group ID: " << tokens[1] << std::endl;
+     std::cout << "Message: ";
+     if (tokens.size() > 3)
+     {
+        for(int i=2;i<tokens.size();i++)
+        {
+            std::cout << tokens[i] << ", ";
+        }
+     }
+     else
+     {
+        std::cout << tokens[2] << std::endl;
+     }
+
+      //closeClient(clientSocket, openSockets, maxfds);
   }
-  else if(tokens[0].compare("WHO") == 0)
+  else if(tokens[0].compare("QUERYSERVERS") == 0)
   {
+     std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
+     
      std::cout << "Who is logged on" << std::endl;
      std::string msg;
 
@@ -238,7 +278,8 @@ int main(int argc, char* argv[])
     fd_set openSockets;             // Current open sockets 
     fd_set readSockets;             // Socket list for select()        
     fd_set exceptSockets;           // Exception socket list
-    int maxfds;                     // Passed to select() as max fd in set
+    int maxfds;      
+    int maxConn = 0;               // Passed to select() as max fd in set
     struct sockaddr_in client;
     socklen_t clientLen;
     char buffer[1025];              // buffer for reading from clients
@@ -252,7 +293,9 @@ int main(int argc, char* argv[])
     // Setup socket for server to listen to
 
     listenSock = open_socket(atoi(argv[1])); 
+    
     printf("Listening on port: %d\n", atoi(argv[1]));
+
 
     if(listen(listenSock, BACKLOG) < 0)
     {
@@ -262,9 +305,12 @@ int main(int argc, char* argv[])
     else 
     // Add listen socket to socket set we are monitoring
     {
-        FD_ZERO(&openSockets);
-        FD_SET(listenSock, &openSockets);
-        maxfds = listenSock;
+        if (maxConn <= MAXSERVERS)
+        {
+            FD_ZERO(&openSockets);
+            FD_SET(listenSock, &openSockets);
+            maxfds = listenSock;
+        }
     }
 
     finished = false;
@@ -331,10 +377,19 @@ int main(int argc, char* argv[])
                       }
                   }
                }
-               // Remove client from the clients list
-               for(auto const& c : disconnectedClients)
-                  clients.erase(c->sock);
+                std::map<int, Client*>::iterator it = clients.begin();
+                for(std::pair<int, Client*> element : clients)
+                {
+                    int number = element.first;
+                    Client c = *element.second;
+                    std::cout << number << " :: " << c.name << std::endl;
+                }
+                // Remove client from the clients list
+                for(auto const& c : disconnectedClients)
+                    clients.erase(c->sock);
             }
         }
     }
+    
+    return 0;
 }
