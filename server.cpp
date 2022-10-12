@@ -168,11 +168,22 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         //std::cout << token << std::endl;
         tokens.push_back(token);
     }
-
+    // COMMANDS:  JOIN,
+    // RESPONSES: SERVERS,
   if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
   {
      std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
+     std::string reply = "Command: " + tokens[0] + " not implemented";
+     send(clientSocket, reply.c_str(), reply.length()-1, 0);
   }
+    else if(tokens[0].compare("JOIN") == 0)
+    {
+        std::cout << "Command " << tokens[0] << " not implemented." << std::endl;
+    }
+    else if(tokens[0].compare("SERVERS") == 0)
+    {
+        std::cout << "Command " << tokens[0] << " not implemented." << std::endl;
+    }
   else if(tokens[0].compare("SEND") == 0)
   {
       // Close the socket, and leave the socket handling
