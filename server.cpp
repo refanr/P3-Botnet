@@ -161,8 +161,10 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   // Split command from client into tokens for parsing
   std::stringstream stream(buffer);
 
-  while(stream >> token)
+  while(std::getline( stream, token, ',')){
+      std::cout << token << std::endl;
       tokens.push_back(token);
+    }
 
   if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
   {
