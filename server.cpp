@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -40,7 +41,10 @@
 
 #define BACKLOG  5          // Allowed length of queue of waiting connections
 #define MAXSERVERS 16
-#define NAME "P3_Group_20"
+#define GROUP_ID "P3_Group_20"
+
+std::string theIPaddr;
+std::string thePortInUse;
 
 // Simple class for handling connections from clients.
 //
@@ -53,7 +57,19 @@ class Client
     int port;
     std::string ip_num;
 
-    Client(int socket) : sock(socket){} 
+    Client(int socket){
+        this->sock = socket;
+        this->port = 0;
+        this->ip_num = "";
+        this->group_id = "";
+    }
+
+    Client(int socket, std::string ip_num, int port){
+        this->sock = socket;
+        this->port = port;
+        this->ip_num = ip_num;
+        this->group_id = "";
+    }
 
     ~Client(){}            // Virtual destructor defined for base class
 };
@@ -126,6 +142,75 @@ int open_socket(int portno)
    }
 }
 
+
+// A monster function that generates a socket for new connections to other servers.
+
+int getSocket(std::vector<std::string> tokens){
+    int newSocket;
+    int set = 1;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+    server = gethostbyname((tokens[1].c_str()));
+
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr,
+        (char *)&serv_addr.sin_addr.s_addr,
+        server->h_length);
+    serv_addr.sin_port = htons(stoi(tokens[2]));
+
+    #ifdef __APPLE__     
+        if((newSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        {
+            perror("Failed to open socket");
+            // return(-1);
+        }
+    #else
+        if((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
+        {
+            perror("Failed to open socket");
+            return(-1);
+        }
+    #endif
+
+        // Turn on SO_REUSEADDR to allow socket to be quickly reused after 
+        // program exit.
+
+        if(setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, &set, sizeof(set)) < 0)
+        {
+            perror("Failed to set SO_REUSEADDR:");
+        }
+        set = 1;
+    #ifdef __APPLE__     
+        if(setsockopt(newSocket, SOL_SOCKET, SOCK_NONBLOCK, &set, sizeof(set)) < 0)
+        {
+            perror("Failed to set SOCK_NOBBLOCK");
+        }
+    #endif
+
+    std::cout << newSocket << std::endl;
+
+    if(setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, &set, sizeof(set)) < 0)
+   {
+       printf("Failed to set SO_REUSEADDR for port %s\n", tokens[2].c_str());
+       perror("setsockopt failed: ");
+   }
+
+    if(connect(newSocket, (struct sockaddr *)&serv_addr, sizeof(serv_addr) )< 0)
+    {
+       // EINPROGRESS means that the connection is still being setup. Typically this
+       // only occurs with non-blocking sockets. (The serverSocket above is explicitly
+       // not in non-blocking mode, so this check here is just an example of how to
+       // handle this properly.)
+       if(errno != EINPROGRESS)
+       {
+         printf("Failed to open socket to server: %s\n", tokens[1].c_str());
+         perror("Connect failed: ");
+       }
+    }
+    return newSocket;
+}
+
 // Close a client's connection, remove it from the client list, and
 // tidy up select sockets afterwards.
 
@@ -165,7 +250,6 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   // Split command from client into tokens for parsing
   std::stringstream stream(buffer);
 
-<<<<<<< HEAD
   while(std::getline(stream, token, ','))
     {
         //std::cout << token << std::endl;
@@ -174,61 +258,71 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     // COMMANDS:  JOIN,
     // RESPONSES: SERVERS,
   if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
-=======
-  while(std::getline( stream, token, ',')){
-      std::cout << token << std::endl;
-      tokens.push_back(token);
-    }
-
-  if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
->>>>>>> main
   {
      std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
      std::string reply = "Command: " + tokens[0] + " not implemented";
      send(clientSocket, reply.c_str(), reply.length()-1, 0);
   }
-    else if(tokens[0].compare("JOIN") == 0)
+  else if(tokens[0].compare("JOIN") == 0)
     {
-        std::cout << "Command " << tokens[0] << " not implemented." << std::endl;
+        
+        std::string reply = "SERVERS,";
+        reply += GROUP_ID;
+        reply += ",";
+        reply += theIPaddr;
+        reply += ",";
+        reply += thePortInUse;
+        reply += ";";
+
+        send(clientSocket, reply.c_str(), reply.length(), 0);
     }
     else if(tokens[0].compare("SERVERS") == 0)
     {
-        std::cout << "Command " << tokens[0] << " not implemented." << std::endl;
+        clients[clientSocket]->group_id = tokens[1];
+        clients[clientSocket]->ip_num = tokens[2];
+        clients[clientSocket]->port = stoi(tokens[3]);
     }
   else if(tokens[0].compare("SEND") == 0)
   {
       // Close the socket, and leave the socket handling
       // code to deal with tidying up clients etc. when
       // select() detects the OS has torn down the connection.
- 
-     std::cout << "SEND: " <<  std::endl;
-     std::cout << "Group ID: " << tokens[1] << std::endl;
-     std::cout << "Message: ";
-     if (tokens.size() > 3)
-     {
-        for(int i=2;i<tokens.size();i++)
-        {
-            std::cout << tokens[i] << ", ";
-        }
-     }
-     else
-     {
-        std::cout << tokens[2] << std::endl;
-     }
+     std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
+     std::string reply = "Command: " + tokens[0] + " not implemented";
+
+    //  std::cout << "SEND: " <<  std::endl;
+    //  std::cout << "Group ID: " << tokens[1] << std::endl;
+    //  std::cout << "Message: ";
+    //  if (tokens.size() > 3)
+    //  {
+    //     for(int i=2;i<tokens.size();i++)
+    //     {
+    //         std::cout << tokens[i] << ", ";
+    //     }
+    //  }
+    //  else
+    //  {
+    //     std::cout << tokens[2] << std::endl;
+    //  }
 
       //closeClient(clientSocket, openSockets, maxfds);
   }
   else if(tokens[0].compare("QUERYSERVERS") == 0)
   {
-     std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
+     //std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
      
-     std::cout << "Who is logged on" << std::endl;
+     std::cout << "Who is logged on: " << std::endl << std::endl;
      std::string msg;
 
      for(auto const& names : clients)
      {
-        msg += names.second->name + ",";
-
+        msg += "Group ID: ";
+        msg += names.second->group_id;
+        msg += ", IP Address: ";
+        msg += names.second->ip_num;
+        msg += ", Port Number: ";
+        msg += std::to_string(names.second->port);
+        msg += "\n";
      }
      // Reducing the msg length by 1 loses the excess "," - which
      // granted is totally cheating.
@@ -254,7 +348,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   {
       for(auto const& pair : clients)
       {
-          if(pair.second->name.compare(tokens[1]) == 0)
+          if(pair.second->group_id.compare(tokens[1]) == 0)
           {
               std::string msg;
               for(auto i = tokens.begin()+2;i != tokens.end();i++) 
@@ -265,6 +359,25 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
           }
       }
   }
+  // A new command from client to connect to other servers.
+  else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 3))
+  {
+    // Hardcoded join message that is sent to newly connected server immidiately after connecting.
+    std::string message = "JOIN,P3_GROUP_20";
+
+    // Validating connection and making generating a secure socket to other server.
+    int newSocket = getSocket(tokens);
+    
+    // Adding the new connection to our client map
+    clients[newSocket] = new Client(newSocket);
+    //Updating maxfds
+    *maxfds = std::max(*maxfds, newSocket) ;
+    //Adding out newSocket connection to openSockets.
+    FD_SET(newSocket, openSockets);
+
+
+    send(newSocket, message.c_str(), message.length(), 0);
+  }
   else
   {
       std::cout << "Unknown command from client:" << buffer << std::endl;
@@ -274,6 +387,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
 
 int main(int argc, char* argv[])
 {
+    struct timeval time;
+
     bool finished;
     int listenSock;                 // Socket for connections to server
     int clientSock;                 // Socket of connecting client
@@ -294,7 +409,8 @@ int main(int argc, char* argv[])
 
     // Setup socket for server to listen to
 
-    listenSock = open_socket(atoi(argv[1])); 
+    listenSock = open_socket(atoi(argv[1]));
+    thePortInUse = argv[1];
     
     printf("Listening on port: %d\n", atoi(argv[1]));
 
@@ -338,10 +454,13 @@ int main(int argc, char* argv[])
             {
                clientSock = accept(listenSock, (struct sockaddr *)&client,
                                    &clientLen);
+               
+               // TRYING TO FETCH THE IP ADDRESS FROM HERE, DID NOT WORK UNFORTUNATELY
+               theIPaddr = std::to_string(client.sin_addr.s_addr);
+
                printf("accept***\n");
                // Add new client to the list of open sockets
                FD_SET(clientSock, &openSockets);
-
                // And update the maximum file descriptor
                maxfds = std::max(maxfds, clientSock) ;
 
@@ -379,13 +498,6 @@ int main(int argc, char* argv[])
                       }
                   }
                }
-                std::map<int, Client*>::iterator it = clients.begin();
-                for(std::pair<int, Client*> element : clients)
-                {
-                    int number = element.first;
-                    Client c = *element.second;
-                    std::cout << number << " :: " << c.name << std::endl;
-                }
                 // Remove client from the clients list
                 for(auto const& c : disconnectedClients)
                     clients.erase(c->sock);
