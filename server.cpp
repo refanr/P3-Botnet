@@ -316,13 +316,16 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
 
      for(auto const& names : clients)
      {
-        msg += "Group ID: ";
-        msg += names.second->group_id;
-        msg += ", IP Address: ";
-        msg += names.second->ip_num;
-        msg += ", Port Number: ";
-        msg += std::to_string(names.second->port);
-        msg += "\n";
+        if (std::to_string(names.second->port) != "0")
+        {
+            msg += "Group ID: ";
+            msg += names.second->group_id;
+            msg += ", IP Address: ";
+            msg += names.second->ip_num;
+            msg += ", Port Number: ";
+            msg += std::to_string(names.second->port);
+            msg += "\n";
+            }
      }
      // Reducing the msg length by 1 loses the excess "," - which
      // granted is totally cheating.
