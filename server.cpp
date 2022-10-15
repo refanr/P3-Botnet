@@ -166,7 +166,7 @@ int getSocket(std::vector<std::string> tokens){
             // return(-1);
         }
     #else
-        if((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
+        if((newSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
         {
             perror("Failed to open socket");
             return(-1);
