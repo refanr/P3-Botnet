@@ -87,6 +87,38 @@ std::map<int, Client*> clients; // Lookup table for per Client information
 //
 // Returns -1 if unable to create the socket for any reason.
 
+std::string addTokens(std::string message)
+{
+    std::string readyMsg = "";
+
+    std::string startToken = "\x1";
+    std::string endToken = "\x4";
+
+    readyMsg = startToken + message + endToken;
+
+    return readyMsg;
+}
+
+std::string sanitizeMessage(char* buffer)
+{
+    std::string str = std::string(buffer);
+
+    // ** CHECKING FOR TOKENS AT THE BEGINNING AND AT THE END ** //
+    if(str.find("\x1") == 0 && str.compare(str.size() - 1, 1, "\x4") == 0)
+    {
+        str.erase(0, 1);
+        str.erase(str.size() - 1, str.size());
+    }
+    else
+    {
+        return "Tokens not valid";
+    }
+    return str;
+
+
+}
+
+
 int open_socket(int portno)
 {
    struct sockaddr_in sk_addr;   // address settings for bind()
@@ -282,13 +314,37 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         clients[clientSocket]->ip_num = tokens[2];
         clients[clientSocket]->port = stoi(tokens[3]);
     }
-  else if(tokens[0].compare("SEND") == 0)
+  else if((tokens[0].compare("SEND") == 0) && (tokens.size() == 3))
   {
       // Close the socket, and leave the socket handling
       // code to deal with tidying up clients etc. when
       // select() detects the OS has torn down the connection.
-     std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
-     std::string reply = "Command: " + tokens[0] + " not implemented";
+    //  std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
+    //  std::string reply = "Command: " + tokens[0] + " not implemented";
+     bool found = false;
+
+     std::string message = "";
+     message += "SEND_MSG,";
+     message += tokens[1];
+     message += ",";
+     message += GROUP_ID;
+     message += ",";
+     message += tokens[2];
+
+     //std::string completeMessage = addTokens(message);
+
+     for(auto const& pair : clients)
+      {
+          if(pair.second->group_id.compare(tokens[1]) == 0)
+          {
+             send(pair.second->sock, message.c_str(), message.length(),0);
+             std::cout << "Message sent!" << std::endl;
+             found = true;
+          }
+      }
+      if(!found){
+        std::cout << "Group ID not connected to server" << std::endl;
+      }
 
     //  std::cout << "SEND: " <<  std::endl;
     //  std::cout << "Group ID: " << tokens[1] << std::endl;
@@ -310,8 +366,6 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   else if(tokens[0].compare("QUERYSERVERS") == 0)
   {
      //std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
-     
-     std::cout << "Who is logged on: " << std::endl << std::endl;
      std::string msg;
 
      for(auto const& names : clients)
@@ -380,6 +434,27 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
 
 
     send(newSocket, message.c_str(), message.length(), 0);
+  }
+  else if ((tokens[0].compare("FETCH_MSG") == 0) && (tokens.size() == 2))
+  {
+     std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
+     std::string reply = "Command: " + tokens[0] + " not implemented";
+     send(clientSocket, reply.c_str(), reply.length()-1, 0);
+  }
+  else if ((tokens[0].compare("STATUSREQ") == 0) && (tokens.size() == 2))
+  {
+     std::string message = "";
+     message += "STATUSRESP,";
+     message += GROUP_ID;
+     message += ",";
+     message += tokens[1];
+     message += ",";
+
+     send(clientSocket, message.c_str(), message.size(), 0);
+  }
+  else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() == 4))
+  {
+    std::cout << tokens[2] << " just sent a message:" << std::endl << tokens[3];
   }
   else
   {
@@ -496,7 +571,11 @@ int main(int argc, char* argv[])
                       // only triggers if there is something on the socket for us.
                       else
                       {
+                          char commandFromClient[1025];
                           std::cout << buffer << std::endl;
+                        //   std::string command = sanitizeMessage(buffer);
+                        //   strcpy(commandFromClient, command.c_str());
+                        //   std::cout << "Buffer: " << buffer << " with tokens: " << commandFromClient << std::endl;
                           clientCommand(client->sock, &openSockets, &maxfds, buffer);
                       }
                   }

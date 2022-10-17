@@ -41,6 +41,21 @@ void logger(char *buffer, std::string fromwho)
     }
 }
 
+    // Function to add the tokens before it's sent to the server
+
+std::string addTokens(char* buffer)
+{
+    std::string message = "";
+    std::string startToken = "\x1";
+    std::string endToken = "\x4";
+
+    std::string str = std::string(buffer);
+    
+    message = startToken + str + endToken;
+
+    return message;
+};
+
     // Threaded function for handling responss from server
 
 void listenServer(int serverSocket)
@@ -143,6 +158,12 @@ int main(int argc, char* argv[])
         fgets(buffer, sizeof(buffer), stdin);
 
         logger(buffer, "Client,");
+
+        std::string msg = addTokens(buffer);
+
+        char improvedBuffer[1025];
+
+        strcpy(improvedBuffer, msg.c_str());
 
         nwrite = send(serverSocket, buffer, strlen(buffer),0);
 
