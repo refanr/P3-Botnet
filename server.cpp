@@ -82,6 +82,8 @@ class Client
 // (indexed on socket no.) sacrificing memory for speed.
 
 std::map<int, Client*> clients; // Lookup table for per Client information
+std::map<std::string, std::vector<std::string>> messages;
+
 
 // Open socket for specified port.
 //
@@ -291,9 +293,14 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     // RESPONSES: SERVERS,
   if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
   {
-     std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
-     std::string reply = "Command: " + tokens[0] + " not implemented";
-     send(clientSocket, reply.c_str(), reply.length()-1, 0);
+     std::string reply;
+    if (messages.count(GROUP_ID) != 0)
+    {
+        for (std::string s : messages[GROUP_ID])
+        reply += s;
+        reply += ",";
+    }
+    send(clientSocket, reply.c_str()-1, reply.length(),0);
   }
   else if(tokens[0].compare("JOIN") == 0)
     {
@@ -344,6 +351,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
       }
       if(!found){
         std::cout << "Group ID not connected to server" << std::endl;
+        messages[tokens[1]].push_back(tokens[2]);
       }
 
     //  std::cout << "SEND: " <<  std::endl;
