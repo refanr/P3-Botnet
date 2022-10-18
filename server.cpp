@@ -86,6 +86,8 @@ std::map<std::string, std::vector<std::string> > messages;
 int keepAliveMsgs = 0;
 
 
+
+
 // Open socket for specified port.
 //
 // Returns -1 if unable to create the socket for any reason.
@@ -420,8 +422,13 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
      message += ",";
      message += tokens[1];
      message += ",";
-
-     send(clientSocket, message.c_str(), message.size(), 0);
+     for (auto it = messages.begin(); it != messages.end(); ++it) 
+     {
+        message += it->first + ",";
+        message += std::to_string(messages[it->first].size()) + ",";
+    }
+    message.erase(std::remove(message.begin(), message.end(), '\n'), message.cend());
+     send(clientSocket, message.c_str()-1, message.size(), 0);
   }
   else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() == 4))
   {
@@ -468,7 +475,14 @@ int main(int argc, char* argv[])
     thePortInUse = argv[1];
     
     printf("Listening on port: %d\n", atoi(argv[1]));
-
+    // for (int i=0;i<10;i++)
+    // {
+    //     std::string gr = "P3_GROUP_" + std::to_string(i);
+    //     for (int j=0;j<3;j++)
+    //     {
+    //         messages[gr].push_back("jamm");
+    //     }
+    // };
 
     if(listen(listenSock, BACKLOG) < 0)
     {
