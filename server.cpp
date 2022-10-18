@@ -472,7 +472,7 @@ int main(int argc, char* argv[])
     // Setup socket for server to listen to
 
     listenSock = open_socket(atoi(argv[1]));
-    thePortInUse = argv[1];
+    thePortInUse = atoi(argv[1]);
     
     printf("Listening on port: %d\n", atoi(argv[1]));
     // for (int i=0;i<10;i++)
@@ -525,7 +525,9 @@ int main(int argc, char* argv[])
                                    &clientLen);
                
                // TRYING TO FETCH THE IP ADDRESS FROM HERE, DID NOT WORK UNFORTUNATELY
-               theIPaddr = std::to_string(client.sin_addr.s_addr);
+               //std::cout << client.sin_addr << std::endl;
+               
+               theIPaddr = inet_ntoa(((sockaddr_in)client).sin_addr);
 
                printf("accept***\n");
                // Add new client to the list of open sockets
