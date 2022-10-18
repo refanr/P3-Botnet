@@ -83,6 +83,7 @@ class Client
 
 std::map<int, Client*> clients; // Lookup table for per Client information
 std::map<std::string, std::vector<std::string>> messages;
+int keepAliveMsgs = 0;
 
 
 // Open socket for specified port.
@@ -352,6 +353,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
       if(!found){
         std::cout << "Group ID not connected to server" << std::endl;
         messages[tokens[1]].push_back(tokens[2]);
+        keepAliveMsgs++;
       }
 
     //  std::cout << "SEND: " <<  std::endl;
