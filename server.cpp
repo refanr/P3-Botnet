@@ -472,7 +472,7 @@ int main(int argc, char* argv[])
     // Setup socket for server to listen to
 
     listenSock = open_socket(atoi(argv[1]));
-    thePortInUse = atoi(argv[1]);
+    thePortInUse = argv[1];
     
     printf("Listening on port: %d\n", atoi(argv[1]));
     // for (int i=0;i<10;i++)
