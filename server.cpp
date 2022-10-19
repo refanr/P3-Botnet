@@ -87,6 +87,8 @@ std::map<std::string, std::vector<std::string> > messages;
 int keepAliveMsgs = 0;
 
 
+
+
 // Open socket for specified port.
 //
 // Returns -1 if unable to create the socket for any reason.
@@ -302,8 +304,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         //std::cout << token << std::endl;
         tokens.push_back(token);
     }
-    // COMMANDS:  JOIN,
-    // RESPONSES: SERVERS,
+
   if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
   {
      std::string reply;
@@ -317,8 +318,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     send(clientSocket, tokenReply.c_str()-1, tokenReply.length(),0);
   }
   else if(tokens[0].compare("JOIN") == 0)
-    {
-        
+    {        
         std::string reply = "SERVERS,";
         reply += GROUP_ID;
         reply += ",";
@@ -362,11 +362,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     }
   else if((tokens[0].compare("SEND") == 0) && (tokens.size() == 3))
   {
-      // Close the socket, and leave the socket handling
-      // code to deal with tidying up clients etc. when
-      // select() detects the OS has torn down the connection.
-    //  std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
-    //  std::string reply = "Command: " + tokens[0] + " not implemented";
+      // Handle messages the client wants to send to other groups
+
      bool found = false;
 
      std::string reply = "";
@@ -394,22 +391,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         keepAliveMsgs++;
       }
 
-    //  std::cout << "SEND: " <<  std::endl;
-    //  std::cout << "Group ID: " << tokens[1] << std::endl;
-    //  std::cout << "Message: ";
-    //  if (tokens.size() > 3)
-    //  {
-    //     for(int i=2;i<tokens.size();i++)
-    //     {
-    //         std::cout << tokens[i] << ", ";
-    //     }
-    //  }
-    //  else
-    //  {
-    //     std::cout << tokens[2] << std::endl;
-    //  }
-
-      //closeClient(clientSocket, openSockets, maxfds);
+    
   }
   else if(tokens[0].compare("QUERYSERVERS") == 0)
   {
@@ -437,36 +419,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
      send(clientSocket, tokenReply.c_str(), tokenReply.length()-1, 0);
 
   }
-  // This is slightly fragile, since it's relying on the order
-  // of evaluation of the if statement.
-//   else if((tokens[0].compare("MSG") == 0) && (tokens[1].compare("ALL") == 0))
-//   {
-//       std::string msg;
-//       for(auto i = tokens.begin()+2;i != tokens.end();i++) 
-//       {
-//           msg += *i + " ";
-//       }
 
-//       for(auto const& pair : clients)
-//       {
-//           send(pair.second->sock, msg.c_str(), msg.length(),0);
-//       }
-//   }
-//   else if(tokens[0].compare("MSG") == 0)
-//   {
-//       for(auto const& pair : clients)
-//       {
-//           if(pair.second->group_id.compare(tokens[1]) == 0)
-//           {
-//               std::string msg;
-//               for(auto i = tokens.begin()+2;i != tokens.end();i++) 
-//               {
-//                   msg += *i + " ";
-//               }
-//               send(pair.second->sock, msg.c_str(), msg.length(),0);
-//           }
-//       }
-//   }
   // A new command from client to connect to other servers.
   else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 3))
   {
@@ -564,7 +517,14 @@ int main(int argc, char* argv[])
     thePortInUse = argv[1];
     
     printf("Listening on port: %d\n", atoi(argv[1]));
-
+    // for (int i=0;i<10;i++)
+    // {
+    //     std::string gr = "P3_GROUP_" + std::to_string(i);
+    //     for (int j=0;j<3;j++)
+    //     {
+    //         messages[gr].push_back("jamm");
+    //     }
+    // };
 
     if(listen(listenSock, BACKLOG) < 0)
     {
@@ -607,7 +567,9 @@ int main(int argc, char* argv[])
                                    &clientLen);
                
                // TRYING TO FETCH THE IP ADDRESS FROM HERE, DID NOT WORK UNFORTUNATELY
-               theIPaddr = std::to_string(client.sin_addr.s_addr);
+               //std::cout << client.sin_addr << std::endl;
+               
+               theIPaddr = inet_ntoa(((sockaddr_in)client).sin_addr);
 
                printf("accept***\n");
                // Add new client to the list of open sockets
