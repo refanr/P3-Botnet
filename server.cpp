@@ -468,9 +468,16 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
      reply += tokens[1];
      reply += ",";
      
-     std::string tokenReply = addTokens(reply);
 
-     send(clientSocket, tokenReply.c_str(), tokenReply.size(), 0);
+     for (auto it = messages.begin(); it != messages.end(); ++it) 
+      {
+         reply += it->first + ",";
+         reply += std::to_string(messages[it->first].size()) + ",";
+      }
+     reply.erase(std::remove(reply.begin(), reply.end(), '\n'), reply.cend());
+     std::string tokenReply = addTokens(reply);
+    
+        send(clientSocket, tokenReply.c_str()-1, tokenReply.size(), 0);
   }
   else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() == 4))
   {
