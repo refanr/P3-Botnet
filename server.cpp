@@ -30,6 +30,7 @@
 #include <sstream>
 #include <thread>
 #include <map>
+#include <regex>
 
 #include <unistd.h>
 
@@ -104,23 +105,29 @@ std::string addTokens(std::string message)
 
 std::string sanitizeMessage(char* buffer)
 {
-    std::string str = std::string(buffer);
+    std::string message = buffer;
 
     // ** CHECKING FOR TOKENS AT THE BEGINNING AND AT THE END ** //
-    if(str.find("\x1") == 0 && str.compare(str.size() - 1, 1, "\x4") == 0)
-    {
-        str.erase(0, 1);
-        str.erase(str.size() - 1, str.size());
+    std::size_t index = message.find("\x1");
+    if(index !=std::string::npos){
+        message.erase(index,1); // erase function takes two parameter, the starting index in the string from where you want to erase characters and total no of characters you want to erase.
     }
-    else
+    
+    index = message.find("\x4");
+    if (index != std::string::npos)
     {
-        return "Tokens not valid";
+        message.erase(index,1);
     }
-    return str;
 
-
+    return message;
 }
 
+std::string eliminateSemiCommas(std::string buffer){
+    std::regex pattern(";");
+    std::string noCommas = std::regex_replace(buffer, pattern, ",");
+
+    return noCommas;
+}
 
 int open_socket(int portno)
 {
@@ -178,21 +185,22 @@ int open_socket(int portno)
 }
 
 
+
 // A monster function that generates a socket for new connections to other servers.
 
-int getSocket(std::vector<std::string> tokens){
+int getSocket(std::string ipAddr, std::string portNr){
     int newSocket;
     int set = 1;
     struct sockaddr_in serv_addr;
     struct hostent *server;
-    server = gethostbyname((tokens[1].c_str()));
+    server = gethostbyname((theIPaddr.c_str()));
 
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     bcopy((char *)server->h_addr,
         (char *)&serv_addr.sin_addr.s_addr,
         server->h_length);
-    serv_addr.sin_port = htons(stoi(tokens[2]));
+    serv_addr.sin_port = htons(stoi(portNr));
 
     #ifdef __APPLE__     
         if((newSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -227,7 +235,7 @@ int getSocket(std::vector<std::string> tokens){
 
     if(setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, &set, sizeof(set)) < 0)
    {
-       printf("Failed to set SO_REUSEADDR for port %s\n", tokens[2].c_str());
+       printf("Failed to set SO_REUSEADDR for port %s\n", portNr.c_str());
        perror("setsockopt failed: ");
    }
 
@@ -239,7 +247,7 @@ int getSocket(std::vector<std::string> tokens){
        // handle this properly.)
        if(errno != EINPROGRESS)
        {
-         printf("Failed to open socket to server: %s\n", tokens[1].c_str());
+         printf("Failed to open socket to server: %s\n", ipAddr.c_str());
          perror("Connect failed: ");
        }
     }
@@ -282,6 +290,10 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   std::vector<std::string> tokens;
   std::string token;
 
+  std::string noSemiCommas = eliminateSemiCommas(std::string(buffer));
+
+  strcpy(buffer, noSemiCommas.c_str());
+
   // Split command from client into tokens for parsing
   std::stringstream stream(buffer);
 
@@ -301,7 +313,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         reply += s;
         reply += ",";
     }
-    send(clientSocket, reply.c_str()-1, reply.length(),0);
+    std::string tokenReply = addTokens(reply);
+    send(clientSocket, tokenReply.c_str()-1, tokenReply.length(),0);
   }
   else if(tokens[0].compare("JOIN") == 0)
     {
@@ -314,13 +327,38 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         reply += thePortInUse;
         reply += ";";
 
-        send(clientSocket, reply.c_str(), reply.length(), 0);
+        std::string tokenReply = addTokens(reply);
+
+        send(clientSocket, tokenReply.c_str(), tokenReply.length(), 0);
     }
     else if(tokens[0].compare("SERVERS") == 0)
     {
         clients[clientSocket]->group_id = tokens[1];
         clients[clientSocket]->ip_num = tokens[2];
         clients[clientSocket]->port = stoi(tokens[3]);
+
+        // if(tokens.size() > 4){
+        //     for (int i = 4; i < token.size(); i = i + 3)
+        //     {
+        //         int newSocket = getSocket(tokens[i+1], tokens[i+2]);
+                
+        //         clients[newSocket] = new Client(newSocket);
+                
+        //         //Updating maxfds
+        //         *maxfds = std::max(*maxfds, newSocket);
+                
+        //         //Adding out newSocket connection to openSockets.
+        //         FD_SET(newSocket, openSockets);
+
+        //         std::string reply = "JOIN,P3_Group_20";
+
+        //         std::string tokenReply = addTokens(reply);
+
+        //         send(newSocket, tokenReply.c_str(), tokenReply.length(), 0);
+
+        //     }
+            
+        // }
     }
   else if((tokens[0].compare("SEND") == 0) && (tokens.size() == 3))
   {
@@ -331,21 +369,21 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     //  std::string reply = "Command: " + tokens[0] + " not implemented";
      bool found = false;
 
-     std::string message = "";
-     message += "SEND_MSG,";
-     message += tokens[1];
-     message += ",";
-     message += GROUP_ID;
-     message += ",";
-     message += tokens[2];
+     std::string reply = "";
+     reply += "SEND_MSG,";
+     reply += tokens[1];
+     reply += ",";
+     reply += GROUP_ID;
+     reply += ",";
+     reply += tokens[2];
 
-     //std::string completeMessage = addTokens(message);
+     std::string tokenReply = addTokens(reply);
 
      for(auto const& pair : clients)
       {
           if(pair.second->group_id.compare(tokens[1]) == 0)
           {
-             send(pair.second->sock, message.c_str(), message.length(),0);
+             send(pair.second->sock, tokenReply.c_str(), tokenReply.length(),0);
              std::cout << "Message sent!" << std::endl;
              found = true;
           }
@@ -376,24 +414,27 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   else if(tokens[0].compare("QUERYSERVERS") == 0)
   {
      //std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
-     std::string msg;
+     std::string reply;
 
      for(auto const& names : clients)
      {
         if (std::to_string(names.second->port) != "0")
         {
-            msg += "Group ID: ";
-            msg += names.second->group_id;
-            msg += ", IP Address: ";
-            msg += names.second->ip_num;
-            msg += ", Port Number: ";
-            msg += std::to_string(names.second->port);
-            msg += "\n";
+            reply += "Group ID: ";
+            reply += names.second->group_id;
+            reply += ", IP Address: ";
+            reply += names.second->ip_num;
+            reply += ", Port Number: ";
+            reply += std::to_string(names.second->port);
+            reply += "\n";
             }
      }
      // Reducing the msg length by 1 loses the excess "," - which
      // granted is totally cheating.
-     send(clientSocket, msg.c_str(), msg.length()-1, 0);
+     
+     std::string tokenReply = addTokens(reply);
+
+     send(clientSocket, tokenReply.c_str(), tokenReply.length()-1, 0);
 
   }
   // This is slightly fragile, since it's relying on the order
@@ -430,10 +471,10 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 3))
   {
     // Hardcoded join message that is sent to newly connected server immidiately after connecting.
-    std::string message = "JOIN,P3_GROUP_20";
+    std::string reply = "JOIN,P3_GROUP_20";
 
     // Validating connection and making generating a secure socket to other server.
-    int newSocket = getSocket(tokens);
+    int newSocket = getSocket(tokens[1], tokens[2]);
     
     // Adding the new connection to our client map
     clients[newSocket] = new Client(newSocket);
@@ -442,8 +483,9 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     //Adding out newSocket connection to openSockets.
     FD_SET(newSocket, openSockets);
 
+    std::string tokenReply = addTokens(reply);
 
-    send(newSocket, message.c_str(), message.length(), 0);
+    send(newSocket, tokenReply.c_str(), tokenReply.length(), 0);
   }
   else if ((tokens[0].compare("FETCH_MSG") == 0) && (tokens.size() == 2))
   {
@@ -455,7 +497,10 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
                     reply += s;
                     reply += ",";
                 }
-            send(clientSocket, reply.c_str()-1, reply.length(),0);
+            
+            std::string tokenReply = addTokens(reply);
+
+            send(clientSocket, tokenReply.c_str()-1, tokenReply.length(),0);
             keepAliveMsgs -= messages[tokens[1]].size();
             messages.erase(tokens[1]);
             
@@ -463,14 +508,16 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   }
   else if ((tokens[0].compare("STATUSREQ") == 0) && (tokens.size() == 2))
   {
-     std::string message = "";
-     message += "STATUSRESP,";
-     message += GROUP_ID;
-     message += ",";
-     message += tokens[1];
-     message += ",";
+     std::string reply = "";
+     reply += "STATUSRESP,";
+     reply += GROUP_ID;
+     reply += ",";
+     reply += tokens[1];
+     reply += ",";
+     
+     std::string tokenReply = addTokens(reply);
 
-     send(clientSocket, message.c_str(), message.size(), 0);
+     send(clientSocket, tokenReply.c_str(), tokenReply.size(), 0);
   }
   else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() == 4))
   {
@@ -599,10 +646,10 @@ int main(int argc, char* argv[])
                       {
                           char commandFromClient[1025];
                           std::cout << buffer << std::endl;
-                        //   std::string command = sanitizeMessage(buffer);
-                        //   strcpy(commandFromClient, command.c_str());
+                          std::string command = sanitizeMessage(buffer);
+                          strcpy(commandFromClient, command.c_str());
                         //   std::cout << "Buffer: " << buffer << " with tokens: " << commandFromClient << std::endl;
-                          clientCommand(client->sock, &openSockets, &maxfds, buffer);
+                          clientCommand(client->sock, &openSockets, &maxfds, commandFromClient);
                       }
                   }
                }
