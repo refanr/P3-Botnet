@@ -318,7 +318,9 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     send(clientSocket, tokenReply.c_str()-1, tokenReply.length(),0);
   }
   else if(tokens[0].compare("JOIN") == 0)
-    {        
+    {   
+        // Add this server as the first server in the reply
+
         std::string reply = "SERVERS,";
         reply += GROUP_ID;
         reply += ",";
@@ -326,6 +328,19 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         reply += ",";
         reply += thePortInUse;
         reply += ";";
+
+        // Iterate through all the servers to add to the list
+        
+        for(auto const& pair: clients)
+        {
+            reply += pair.second->group_id;
+            reply += ",";
+            reply += pair.second->ip_num;
+            reply += ",";
+            reply += pair.second->port;
+            reply += ";";
+            
+        }
 
         std::string tokenReply = addTokens(reply);
 
