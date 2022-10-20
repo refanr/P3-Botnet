@@ -191,6 +191,8 @@ int open_socket(int portno)
 // A monster function that generates a socket for new connections to other servers.
 
 int getSocket(std::string ipAddr, std::string portNr){
+
+    std::cout << ipAddr << "-" << portNr;
     int newSocket;
     int set = 1;
     struct sockaddr_in serv_addr;
@@ -330,7 +332,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         reply += ";";
 
         // Iterate through all the servers to add to the list
-        
+
         for(auto const& pair: clients)
         {
             reply += pair.second->group_id;
@@ -379,32 +381,37 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   {
       // Handle messages the client wants to send to other groups
 
-     bool found = false;
+    messages[tokens[1]].push_back(tokens[2]);
 
-     std::string reply = "";
-     reply += "SEND_MSG,";
-     reply += tokens[1];
-     reply += ",";
-     reply += GROUP_ID;
-     reply += ",";
-     reply += tokens[2];
+    // bool found = false;
 
-     std::string tokenReply = addTokens(reply);
+    //  std::string reply = "";
+    //  reply += "SEND_MSG,";
+    //  reply += tokens[1];
+    //  reply += ",";
+    //  reply += GROUP_ID;
+    //  reply += ",";
+    //  reply += tokens[2];
+
+     
 
      for(auto const& pair : clients)
       {
           if(pair.second->group_id.compare(tokens[1]) == 0)
           {
-             send(pair.second->sock, tokenReply.c_str(), tokenReply.length(),0);
-             std::cout << "Message sent!" << std::endl;
-             found = true;
+            std::string reply = "KEEPALIVE,";
+            reply += std::to_string(messages[tokens[1]].size());
+            std::string tokenReply = addTokens(reply);
+            send(pair.second->sock, tokenReply.c_str(), tokenReply.length(),0);
+            std::cout << "Message sent!" << std::endl;
+            // found = true;
           }
       }
-      if(!found){
-        std::cout << "Group ID not connected to server" << std::endl;
-        messages[tokens[1]].push_back(tokens[2]);
-        keepAliveMsgs++;
-      }
+    //   if(!found){
+    //     std::cout << "Group ID not connected to server" << std::endl;
+    //     messages[tokens[1]].push_back(tokens[2]);
+    //     keepAliveMsgs++;
+    //   }
 
     
   }
@@ -448,7 +455,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     clients[newSocket] = new Client(newSocket);
     //Updating maxfds
     *maxfds = std::max(*maxfds, newSocket) ;
-    //Adding out newSocket connection to openSockets.
+    //Adding our newSocket connection to openSockets.
     FD_SET(newSocket, openSockets);
 
     std::string tokenReply = addTokens(reply);
