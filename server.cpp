@@ -286,6 +286,20 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 
 }
 
+void keepAlive(int clientSocket, std::string group_id)
+{
+    while(true)
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(60));
+        std::string reply = "KEEPALIVE,";
+        reply += std::to_string(messages[group_id].size());
+        std::string tokenReply = addTokens(reply);
+        send(clientSocket, tokenReply.c_str(), tokenReply.length(),0);
+    }
+
+
+}
+
 // Process command from client on the server
 
 void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, 
@@ -321,6 +335,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   }
   else if(tokens[0].compare("JOIN") == 0)
     {   
+
+        std::thread(keepAlive,clientSocket,tokens[1]).detach();
         // Add this server as the first server in the reply
 
         std::string reply = "SERVERS,";
