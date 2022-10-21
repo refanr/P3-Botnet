@@ -97,8 +97,8 @@ std::string addTokens(std::string message)
 {
     std::string readyMsg = "";
 
-    std::string startToken = "\x1";
-    std::string endToken = "\x4";
+    std::string startToken = "\x01";
+    std::string endToken = "\x04";
 
     readyMsg = startToken + message + endToken;
 
@@ -110,15 +110,22 @@ std::string sanitizeMessage(char* buffer)
     std::string message = buffer;
 
     // ** CHECKING FOR TOKENS AT THE BEGINNING AND AT THE END ** //
-    std::size_t index = message.find("\x1");
+    std::size_t index = message.find("\x01");
     if(index !=std::string::npos){
         message.erase(index,1); // erase function takes two parameter, the starting index in the string from where you want to erase characters and total no of characters you want to erase.
     }
+    else
+    {
+        std::cout << "No start token" << std::endl;
+    }
     
-    index = message.find("\x4");
+    index = message.find("\x04");
     if (index != std::string::npos)
     {
         message.erase(index,1);
+    }else
+    {
+        std::cout << "No end token" << std::endl;
     }
 
     return message;
@@ -331,7 +338,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         reply += ",";
     }
     std::string tokenReply = addTokens(reply);
-    send(clientSocket, tokenReply.c_str()-1, tokenReply.length(),0);
+    send(clientSocket, tokenReply.c_str(), tokenReply.length(),0);
   }
   else if(tokens[0].compare("JOIN") == 0)
     {   
@@ -447,7 +454,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
             reply += ", Port Number: ";
             reply += std::to_string(names.second->port);
             reply += "\n";
-            }
+        }
      }
      // Reducing the msg length by 1 loses the excess "," - which
      // granted is totally cheating.

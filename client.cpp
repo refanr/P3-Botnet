@@ -46,8 +46,8 @@ void logger(char *buffer, std::string fromwho)
 std::string addTokens(char* buffer)
 {
     std::string message = "";
-    std::string startToken = "\x1";
-    std::string endToken = "\x4";
+    std::string startToken = "\x01";
+    std::string endToken = "\x04";
 
     std::string str = std::string(buffer);
     
@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
 
         strcpy(improvedBuffer, msg.c_str());
 
-        nwrite = send(serverSocket, buffer, strlen(buffer),0);
+        nwrite = send(serverSocket, improvedBuffer, strlen(improvedBuffer),0);
 
         if(nwrite  == -1)
         {
