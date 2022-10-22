@@ -526,6 +526,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
             std::string reply = "SEND_MSG,";
             reply += tokens[1];
             reply += ",";
+            reply += GROUP_ID;
+            reply += ",";
             for (std::string s : messages[tokens[1]])
                 {
                     reply += s;
@@ -561,7 +563,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   else if ((tokens[0].compare("SEND_MSG") == 0))
   {
 
-    messages[tokens[1]].push_back(tokens[2]);
+    messages[tokens[1]].push_back(tokens[3]);
     
     
   }
