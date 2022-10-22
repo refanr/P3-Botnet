@@ -8,8 +8,12 @@
 
 - server.cpp
     - To compile: `g++ -std=c++11 server.cpp`
+    - OS: MacOS
 - client.cpp
     - To compile: `g++ -std=c++11 client.cpp`
+    - OS: MacOS
+
+
 
 ## How to run
 
@@ -23,3 +27,21 @@
 We have implemented rudimentary server and client programs. The client is able to connect to the server, and the server accepts commands from the client. 
 When the client issues the command `CONNECT,<ip>,<portno>`, the server connects to another server with the given information and sends out a `JOIN,GROUP_20` command to said server, then gets a standard reply: `SERVERS,<group>,<ip>,<port>` which is added to a vector of connections.
 When the client issues the command `QUERYSERVERS,`, the server replies with a list of active connections. Querysevers must end with a comma!
+
+## Final Product
+We have successfully implemented all features of the server and client programs, server commands:
+- `JOIN,<GROUP_ID>`
+- `SERVERS,<serverlist>`
+- `KEEPALIVE,<No. of Messages>``
+- `FETCH_MSGS,<GROUP_ID>`
+- `SEND_MSG,<TO_GROUP_ID>,<FROM_GROUP_ID>,<Message content>`
+- `STATUSREQ,<FROM_GROUP_ID>`
+- `STATUSRESP,FROM_GROUP,TO_GROUP,<group, msgs held>``
+
+client commands:
+- `FETCH,GROUP_ID`
+- `SEND,GROUP_ID,<message contents>`
+- `QUERYSERVERS`
+
+
+
