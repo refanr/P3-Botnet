@@ -312,7 +312,7 @@ void keepAlive(int clientSocket, std::string group_id)
 {
     while(true)
     {
-        std::this_thread::sleep_for(std::chrono::seconds(60));
+        std::this_thread::sleep_for(std::chrono::seconds(20));
         std::string reply = "KEEPALIVE,";
         reply += std::to_string(messages[group_id].size());
         std::string tokenReply = addTokens(reply);
@@ -354,15 +354,12 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
 
   if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
   {
-     std::string reply;
-    if (messages.count(GROUP_ID) != 0)
-    {
-        for (std::string s : messages[GROUP_ID])
-        reply += s;
-        reply += ",";
-    }
-    std::string tokenReply = addTokens(reply);
-    send(clientSocket, tokenReply.c_str(), tokenReply.length(),0);
+    std::cout << messages[tokens[1]].at(0) << std::endl;
+    std::string reply = "Message recieved: ";
+    reply += messages[tokens[1]][0];
+
+    send(clientSocket, reply.c_str(), reply.length(),0);
+    
   }
   else if(tokens[0].compare("JOIN") == 0)
     {   
@@ -412,6 +409,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         clients[clientSocket]->group_id = tokens[1];
         clients[clientSocket]->ip_num = tokens[2];
         clients[clientSocket]->port = stoi(tokens[3]);
+
+        
 
         // if(tokens.size() > 4){
         //     for (int i = 4; i < token.size(); i = i + 3)
@@ -520,21 +519,21 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
 
     send(newSocket, tokenReply.c_str(), tokenReply.length(), 0);
   }
-  else if ((tokens[0].compare("FETCH_MSG") == 0) && (tokens.size() == 2))
+  else if ((tokens[0].compare("FETCH_MSGS") == 0) && (tokens.size() == 2))
   {
      if (messages.count(tokens[1]) != 0)
         {
-            std::string reply;
+            std::string reply = "SEND_MSG,";
+            reply += tokens[1];
+            reply += ",";
             for (std::string s : messages[tokens[1]])
                 {
                     reply += s;
-                    reply += ",";
                 }
             
             std::string tokenReply = addTokens(reply);
 
             send(clientSocket, tokenReply.c_str(), tokenReply.length(),0);
-            keepAliveMsgs -= messages[tokens[1]].size();
             messages.erase(tokens[1]);
             
         }
@@ -559,22 +558,19 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     
         send(clientSocket, tokenReply.c_str(), tokenReply.size(), 0);
   }
-  else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() == 4))
+  else if ((tokens[0].compare("SEND_MSG") == 0))
   {
-    if (tokens[1] != GROUP_ID)
-    {
-        messages[tokens[1]].push_back(tokens[3]);
-        keepAliveMsgs++;
-    }
-    else
-        std::cout << tokens[2] << " just sent a message:" << std::endl << tokens[3];
+
+    messages[tokens[1]].push_back(tokens[2]);
+    
+    
   }
   else if ((tokens[0].compare("KEEPALIVE") == 0) && (tokens.size() > 1))
   {
     clients[clientSocket]->lastRcvdKeepAlive = getTime();
     if (stoi(tokens[1]) > 0)
     {
-        std::string reply = "FETCH,P3_GROUP_20";
+        std::string reply = "FETCH_MSGS,P3_GROUP_20";
         std::string tokenReply = addTokens(reply);
         send(clientSocket, tokenReply.c_str(), tokenReply.size(), 0);
     }
