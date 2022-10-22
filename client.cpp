@@ -157,14 +157,17 @@ int main(int argc, char* argv[])
 
         fgets(buffer, sizeof(buffer), stdin);
 
-        logger(buffer, "Client,");
 
         std::string msg = addTokens(buffer);
+
+        msg.erase(std::remove(msg.begin(), msg.end(), '\n'), msg.cend());
 
         char improvedBuffer[1025];
 
         strcpy(improvedBuffer, msg.c_str());
 
+        logger(improvedBuffer, "Client,");
+        
         nwrite = send(serverSocket, improvedBuffer, strlen(improvedBuffer),0);
 
         if(nwrite  == -1)

@@ -95,12 +95,16 @@ int keepAliveMsgs = 0;
 
 std::string addTokens(std::string message)
 {
+    std::string theMessage = message;
+
+    theMessage.erase(std::remove(theMessage.begin(), theMessage.end(), '\n'), theMessage.cend());
+
     std::string readyMsg = "";
 
     std::string startToken = "\x01";
     std::string endToken = "\x04";
 
-    readyMsg = startToken + message + endToken;
+    readyMsg = startToken + theMessage + endToken;
 
     return readyMsg;
 }
@@ -108,6 +112,8 @@ std::string addTokens(std::string message)
 std::string sanitizeMessage(char* buffer)
 {
     std::string message = buffer;
+
+    message.erase(remove(message.begin(), message.end(), '\n'), message.end());
 
     // ** CHECKING FOR TOKENS AT THE BEGINNING AND AT THE END ** //
     std::size_t index = message.find("\x01");
@@ -314,19 +320,28 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
 {
   std::vector<std::string> tokens;
   std::string token;
+  std::string theBuffer = std::string(buffer);
 
-  std::string noSemiCommas = eliminateSemiCommas(std::string(buffer));
+//   std::string noSemiCommas = eliminateSemiCommas(std::string(buffer));
 
-  strcpy(buffer, noSemiCommas.c_str());
+//   strcpy(buffer, noSemiCommas.c_str());
+  size_t start;
+  size_t end = 0;
+  
+  while ((start = theBuffer.find_first_not_of(',', end)) != std::string::npos)
+  {
+    end = theBuffer.find(',', start);
+    tokens.push_back(theBuffer.substr(start, end - start));
+  }
 
   // Split command from client into tokens for parsing
-  std::stringstream stream(buffer);
+//   std::stringstream stream(buffer);
 
-  while(std::getline(stream, token, ','))
-    {
-        //std::cout << token << std::endl;
-        tokens.push_back(token);
-    }
+//   while(std::getline(stream, token, ','))
+//     {
+//         //std::cout << token << std::endl;
+//         tokens.push_back(token);
+//     }
 
   if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
   {
@@ -355,17 +370,29 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
         reply += ";";
 
         // Iterate through all the servers to add to the list
-
-        for(auto const& pair: clients)
+        for(auto const& names : clients)
         {
-            reply += pair.second->group_id;
-            reply += ",";
-            reply += pair.second->ip_num;
-            reply += ",";
-            reply += pair.second->port;
-            reply += ";";
-            
+            if (std::to_string(names.second->port) != "0")
+            {
+                reply += names.second->group_id;
+                reply += ",";
+                reply += names.second->ip_num;
+                reply += ",";
+                reply += std::to_string(names.second->port);
+                reply += ";";
+            }
         }
+
+        // for(auto const& pair: clients)
+        // {
+        //     reply += pair.second->group_id;
+        //     reply += ",";
+        //     reply += pair.second->ip_num;
+        //     reply += ",";
+        //     reply += pair.second->port;
+        //     reply += ";";
+            
+        // }
 
         std::string tokenReply = addTokens(reply);
 
@@ -458,10 +485,9 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
      }
      // Reducing the msg length by 1 loses the excess "," - which
      // granted is totally cheating.
-     
      std::string tokenReply = addTokens(reply);
 
-     send(clientSocket, tokenReply.c_str(), tokenReply.length()-1, 0);
+     send(clientSocket, tokenReply.c_str(), tokenReply.length(), 0);
 
   }
 
@@ -498,7 +524,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
             
             std::string tokenReply = addTokens(reply);
 
-            send(clientSocket, tokenReply.c_str()-1, tokenReply.length(),0);
+            send(clientSocket, tokenReply.c_str(), tokenReply.length(),0);
             keepAliveMsgs -= messages[tokens[1]].size();
             messages.erase(tokens[1]);
             
@@ -522,7 +548,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
      reply.erase(std::remove(reply.begin(), reply.end(), '\n'), reply.cend());
      std::string tokenReply = addTokens(reply);
     
-        send(clientSocket, tokenReply.c_str()-1, tokenReply.size(), 0);
+        send(clientSocket, tokenReply.c_str(), tokenReply.size(), 0);
   }
   else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() == 4))
   {
