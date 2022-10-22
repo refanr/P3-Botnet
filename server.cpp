@@ -57,12 +57,14 @@ class Client
     std::string group_id;           // Limit length of name of client's user
     int port;
     std::string ip_num;
+    int lastRcvdKeepAlive;
 
     Client(int socket){
         this->sock = socket;
         this->port = 0;
         this->ip_num = "";
         this->group_id = "";
+        this->lastRcvdKeepAlive = 0;
     }
 
     Client(int socket, std::string ip_num, int port){
@@ -70,6 +72,7 @@ class Client
         this->port = port;
         this->ip_num = ip_num;
         this->group_id = "";
+        this->lastRcvdKeepAlive = 0;
     }
 
     ~Client(){}            // Virtual destructor defined for base class
@@ -85,6 +88,12 @@ class Client
 std::map<int, Client*> clients; // Lookup table for per Client information
 std::map<std::string, std::vector<std::string> > messages;
 int keepAliveMsgs = 0;
+
+int getTime()
+{
+    int retTime = (int)time(0);
+    return retTime;
+}
 
 
 
@@ -534,6 +543,16 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     else
         std::cout << tokens[2] << " just sent a message:" << std::endl << tokens[3];
   }
+  else if ((tokens[0].compare("KEEPALIVE") == 0) && (tokens.size() > 1))
+  {
+    clients[clientSocket]->lastRcvdKeepAlive = getTime();
+    if (stoi(tokens[1]) > 0)
+    {
+        std::string reply = "FETCH,P3_GROUP_20";
+        std::string tokenReply = addTokens(reply);
+        send(clientSocket, tokenReply.c_str(), tokenReply.size(), 0);
+    }
+  }
   else
   {
       std::cout << "Unknown command from client:" << buffer << std::endl;
@@ -637,8 +656,21 @@ int main(int argc, char* argv[])
 
                printf("Client connected on server: %d\n", clientSock);
             }
+            std::list<Client *> disconnectedClients;
+
+            // Check for KEEPALIVE times for all connected clients and disconnect if timed out
+
+            for (auto const& pair : clients)
+            {
+                Client *client = pair.second;
+                if (client->lastRcvdKeepAlive != 0 && getTime() - client->lastRcvdKeepAlive >= 60 )
+                {
+                    disconnectedClients.push_back(client);
+                    closeClient(client->sock, &openSockets, &maxfds);
+                }
+            }
             // Now check for commands from clients
-            std::list<Client *> disconnectedClients;  
+              
             while(n-- > 0)
             {
                for(auto const& pair : clients)
