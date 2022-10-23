@@ -28,6 +28,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <thread>
 #include <map>
 #include <regex>
@@ -89,6 +90,8 @@ std::map<int, Client*> clients; // Lookup table for per Client information
 std::map<std::string, std::vector<std::string> > messages;
 int keepAliveMsgs = 0;
 
+
+// Function to get time from UNIX epoch, 00:00:00, Jan 1st, 1970
 int getTime()
 {
     int retTime = (int)time(0);
@@ -96,6 +99,16 @@ int getTime()
 }
 
 
+// Function to write timestamped log to file
+void logger(char *buffer, std::string fromwho)
+{
+    std::ofstream log ("server_log.txt", std::ios_base::app);
+    if (log.is_open())
+    {
+        std::time_t result = std::time(nullptr);
+        log << fromwho <<std::asctime(std::localtime(&result)) << " " << buffer << std::endl;              
+    }
+}
 
 
 // Open socket for specified port.
@@ -132,6 +145,8 @@ std::string sanitizeMessage(char* buffer)
     else
     {
         std::cout << "No start token" << std::endl;
+        char rep[] = "No start token";
+        logger(rep, "Server");
     }
     
     index = message.find("\x04");
@@ -141,6 +156,8 @@ std::string sanitizeMessage(char* buffer)
     }else
     {
         std::cout << "No end token" << std::endl;
+        char rep[] = "No end token";
+        logger(rep, "Server");
     }
 
     return message;
@@ -214,7 +231,7 @@ int open_socket(int portno)
 
 int getSocket(std::string ipAddr, std::string portNr){
 
-    std::cout << ipAddr << "-" << portNr;
+    //std::cout << ipAddr << "-" << portNr;
     int newSocket;
     int set = 1;
     struct sockaddr_in serv_addr;
@@ -354,7 +371,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
 
   if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
   {
-    std::cout << messages[tokens[1]].at(0) << std::endl;
+    // std::cout << messages[tokens[1]].at(0) << std::endl;
     std::string reply = "Message recieved: ";
     reply += messages[tokens[1]][0];
 
@@ -462,6 +479,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
             std::string tokenReply = addTokens(reply);
             send(pair.second->sock, tokenReply.c_str(), tokenReply.length(),0);
             std::cout << "Message sent!" << std::endl;
+            
             // found = true;
           }
       }
@@ -580,6 +598,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   else
   {
       std::cout << "Unknown command from client:" << buffer << std::endl;
+      char rep[] = "Unknown command from client:"; 
+      logger(rep, "SERVER");
   }
      
 }
@@ -716,6 +736,10 @@ int main(int argc, char* argv[])
                       {
                           char commandFromClient[1025];
                           std::cout << buffer << std::endl;
+                          std::string loggee = "Client(";
+                          loggee += client->group_id;
+                          loggee += ")";
+                          logger(buffer, loggee);
                           std::string command = sanitizeMessage(buffer);
                           strcpy(commandFromClient, command.c_str());
                         //   std::cout << "Buffer: " << buffer << " with tokens: " << commandFromClient << std::endl;

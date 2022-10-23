@@ -33,7 +33,7 @@
 
 void logger(char *buffer, std::string fromwho)
 {
-    std::ofstream log ("log.txt", std::ios_base::app);
+    std::ofstream log ("client_log.txt", std::ios_base::app);
     if (log.is_open())
     {
         std::time_t result = std::time(nullptr);

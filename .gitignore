@@ -10,3 +10,4 @@ test
 test.cpp
 server2
 server.cpp
+*.txt
