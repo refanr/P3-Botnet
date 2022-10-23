@@ -88,7 +88,7 @@ class Client
 
 std::map<int, Client*> clients; // Lookup table for per Client information
 std::map<std::string, std::vector<std::string> > messages; // Lookup table for message we have sent and received.
-int keepAliveMsgs = 0;
+
 
 
 // Function to get time from UNIX epoch, 00:00:00, Jan 1st, 1970
@@ -728,7 +728,6 @@ int main(int argc, char* argv[])
                           logger(buffer, loggee);
                           std::string command = sanitizeMessage(buffer);
                           strcpy(commandFromClient, command.c_str());
-                        //   std::cout << "Buffer: " << buffer << " with tokens: " << commandFromClient << std::endl;
                           clientCommand(client->sock, &openSockets, &maxfds, commandFromClient);
                       }
                   }
