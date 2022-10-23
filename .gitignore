@@ -11,3 +11,4 @@ test.cpp
 server2
 server.cpp
 *.txt
+trace.pcapng
