@@ -52,4 +52,14 @@ client commands:
 - `QUERYSERVERS`
 
 
+We ran into some problems when trying to run our server on skel(130.208.243.61). It crashed, seemingly when someone tried to connect/send a command without the \x01 & \x04 tokens added. At least the output was always the same:
+`Client connected on server: 6`
+`no start token`
+`no end token`
+`[1]    3108172 segmentation fault (core dumped)` 
+We were unable to find the cause for this segmentation fault and had a hard time recreating the fault when running multiple servers locally.
+
+We were able to connect to a few servers and exchange some messages with a few of them. 
+
+
 
