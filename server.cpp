@@ -592,7 +592,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
     clients[clientSocket]->lastRcvdKeepAlive = getTime();
     if (stoi(tokens[1]) > 0)
     {
-        std::string reply = "FETCH_MSGS,P3_GROUP_20";
+        std::string reply = "FETCH_MSGS,";
+        reply += GROUP_ID;
         std::string tokenReply = addTokens(reply);
         send(clientSocket, tokenReply.c_str(), tokenReply.size(), 0);
     }
