@@ -371,11 +371,13 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
 
   if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
   {
-    // std::cout << messages[tokens[1]].at(0) << std::endl;
-    std::string reply = "Message recieved: ";
-    reply += messages[tokens[1]][0];
+    if (messages.count(tokens[1]) != 0)
+    {
+        std::string reply = "Message recieved: ";
+        reply += messages[tokens[1]][0];
 
-    send(clientSocket, reply.c_str(), reply.length(),0);
+        send(clientSocket, reply.c_str(), reply.length(),0);
+    }
     
   }
   else if(tokens[0].compare("JOIN") == 0)
