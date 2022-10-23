@@ -149,7 +149,7 @@ std::string sanitizeMessage(char* buffer)
         // Mainly for debugging purpose
         std::cout << "No start token" << std::endl;
         char rep[] = "No start token";
-        logger(rep, "Server");
+        logger(rep, "SERVER,");
     }
     
     // Checking for the end token.
@@ -163,7 +163,7 @@ std::string sanitizeMessage(char* buffer)
         // Mainly for debugging purpose
         std::cout << "No end token" << std::endl;
         char rep[] = "No end token";
-        logger(rep, "Server");
+        logger(rep, "SERVER,");
     }
 
     return message;
@@ -502,7 +502,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 3))
   {
     // Hardcoded join message that is sent to newly connected server immidiately after connecting.
-    std::string reply = "JOIN,P3_GROUP_20";
+    std::string reply = "JOIN,";
+    reply += GROUP_ID;
 
     // Validating connection and making generating a secure socket to other server.
     int newSocket = getSocket(tokens[1], tokens[2]);
@@ -583,8 +584,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   else
   {
       std::cout << "Unknown command from client:" << buffer << std::endl;
-      char rep[] = "Unknown command from client:"; 
-      logger(rep, "SERVER");
+      char rep[] = "Unknown command from client:";
+      logger(rep, "SERVER,");
   }
      
 }
@@ -721,9 +722,9 @@ int main(int argc, char* argv[])
                       {
                           char commandFromClient[1025];
                           std::cout << buffer << std::endl;
-                          std::string loggee = "Client(";
+                          std::string loggee = "CLIENT(";
                           loggee += client->group_id;
-                          loggee += ")";
+                          loggee += "),";
                           logger(buffer, loggee);
                           std::string command = sanitizeMessage(buffer);
                           strcpy(commandFromClient, command.c_str());
