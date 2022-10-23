@@ -6,6 +6,14 @@
 
 ## Contents
 
+- To compile using Makefile
+    - To compile both server.cpp and client.cpp
+        - Input `make` in the command line
+    - To compile server.cpp
+        - Input `make server` in the command line
+    - To compile client.cpp
+        - Input `make client` in the command line
+
 - server.cpp
     - To compile: `g++ -std=c++11 server.cpp`
     - OS: MacOS
@@ -32,11 +40,11 @@ When the client issues the command `QUERYSERVERS,`, the server replies with a li
 We have successfully implemented all features of the server and client programs, server commands:
 - `JOIN,<GROUP_ID>`
 - `SERVERS,<serverlist>`
-- `KEEPALIVE,<No. of Messages>``
+- `KEEPALIVE,<No. of Messages>`
 - `FETCH_MSGS,<GROUP_ID>`
 - `SEND_MSG,<TO_GROUP_ID>,<FROM_GROUP_ID>,<Message content>`
 - `STATUSREQ,<FROM_GROUP_ID>`
-- `STATUSRESP,FROM_GROUP,TO_GROUP,<group, msgs held>``
+- `STATUSRESP,FROM_GROUP,TO_GROUP,<group, msgs held>`
 
 client commands:
 - `FETCH,GROUP_ID`

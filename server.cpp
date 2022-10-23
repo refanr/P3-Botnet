@@ -87,7 +87,7 @@ class Client
 // (indexed on socket no.) sacrificing memory for speed.
 
 std::map<int, Client*> clients; // Lookup table for per Client information
-std::map<std::string, std::vector<std::string> > messages;
+std::map<std::string, std::vector<std::string> > messages; // Lookup table for message we have sent and received.
 int keepAliveMsgs = 0;
 
 
@@ -111,14 +111,13 @@ void logger(char *buffer, std::string fromwho)
 }
 
 
-// Open socket for specified port.
-//
-// Returns -1 if unable to create the socket for any reason.
 
+// A function to add the start and end tokens before it is sent to another client(server)
 std::string addTokens(std::string message)
 {
     std::string theMessage = message;
 
+    // Removing any unwanted new line charachters.
     theMessage.erase(std::remove(theMessage.begin(), theMessage.end(), '\n'), theMessage.cend());
 
     std::string readyMsg = "";
@@ -131,30 +130,37 @@ std::string addTokens(std::string message)
     return readyMsg;
 }
 
+//Function to get rid of the tokens before it is handled.
 std::string sanitizeMessage(char* buffer)
 {
     std::string message = buffer;
 
+    // remove any new line if it exists in the command.
     message.erase(remove(message.begin(), message.end(), '\n'), message.end());
 
-    // ** CHECKING FOR TOKENS AT THE BEGINNING AND AT THE END ** //
+    // Checking for the start token
     std::size_t index = message.find("\x01");
     if(index !=std::string::npos){
-        message.erase(index,1); // erase function takes two parameter, the starting index in the string from where you want to erase characters and total no of characters you want to erase.
+        // Removing the start token if found.
+        message.erase(index,1);
     }
     else
     {
+        // Mainly for debugging purpose
         std::cout << "No start token" << std::endl;
         char rep[] = "No start token";
         logger(rep, "Server");
     }
     
+    // Checking for the end token.
     index = message.find("\x04");
     if (index != std::string::npos)
     {
+        // Removing the start token if found.
         message.erase(index,1);
     }else
     {
+        // Mainly for debugging purpose
         std::cout << "No end token" << std::endl;
         char rep[] = "No end token";
         logger(rep, "Server");
@@ -162,6 +168,9 @@ std::string sanitizeMessage(char* buffer)
 
     return message;
 }
+
+// A function that replaces the semicommas in the servers command
+// Ended up not using it, couldn't connect to all the servers that got send in the command
 
 std::string eliminateSemiCommas(std::string buffer){
     std::regex pattern(";");
@@ -354,23 +363,21 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   size_t start;
   size_t end = 0;
   
+
+  // REFERENCE https://www.techiedelight.com/split-string-cpp-using-delimiter/
+  //Splitting an incoming command to the tokens vector for us to handle
+
   while ((start = theBuffer.find_first_not_of(',', end)) != std::string::npos)
   {
     end = theBuffer.find(',', start);
     tokens.push_back(theBuffer.substr(start, end - start));
   }
 
-  // Split command from client into tokens for parsing
-//   std::stringstream stream(buffer);
-
-//   while(std::getline(stream, token, ','))
-//     {
-//         //std::cout << token << std::endl;
-//         tokens.push_back(token);
-//     }
-
   if((tokens[0].compare("FETCH") == 0) && (tokens.size() == 2))
   {
+    // A FETCH,<GROUP ID> to retrieve a message from our message map,
+    // It is possible to fetch a message for any Group id that we have sent.
+
     if (messages.count(tokens[1]) != 0)
     {
         std::string reply = "Message recieved: ";
@@ -408,28 +415,19 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
             }
         }
 
-        // for(auto const& pair: clients)
-        // {
-        //     reply += pair.second->group_id;
-        //     reply += ",";
-        //     reply += pair.second->ip_num;
-        //     reply += ",";
-        //     reply += pair.second->port;
-        //     reply += ";";
-            
-        // }
-
         std::string tokenReply = addTokens(reply);
 
         send(clientSocket, tokenReply.c_str(), tokenReply.length(), 0);
     }
     else if(tokens[0].compare("SERVERS") == 0)
     {
+        // Upon receiving a SERVERS command we only take the info gotten from the client we sent join and add them to our clients map
         clients[clientSocket]->group_id = tokens[1];
         clients[clientSocket]->ip_num = tokens[2];
         clients[clientSocket]->port = stoi(tokens[3]);
 
-        
+        // ** WE TRIED TO IMPLEMENT IT SO WE COULD CONNECT TO EACH OF THE ADDITIONAL SERVERS GOTTEN FROM THE COMMAND
+        // ** BUT IT DIDN'T MANAGE TO GET IT TO WORK SADLY.
 
         // if(tokens.size() > 4){
         //     for (int i = 4; i < token.size(); i = i + 3)
@@ -460,17 +458,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
 
     messages[tokens[1]].push_back(tokens[2]);
 
-    // bool found = false;
 
-    //  std::string reply = "";
-    //  reply += "SEND_MSG,";
-    //  reply += tokens[1];
-    //  reply += ",";
-    //  reply += GROUP_ID;
-    //  reply += ",";
-    //  reply += tokens[2];
-
-     
+      // Send a KEEPALIVE message to the connection to notify them that we have a message for them to fetch
 
      for(auto const& pair : clients)
       {
@@ -481,23 +470,15 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
             std::string tokenReply = addTokens(reply);
             send(pair.second->sock, tokenReply.c_str(), tokenReply.length(),0);
             std::cout << "Message sent!" << std::endl;
-            
-            // found = true;
           }
       }
-    //   if(!found){
-    //     std::cout << "Group ID not connected to server" << std::endl;
-    //     messages[tokens[1]].push_back(tokens[2]);
-    //     keepAliveMsgs++;
-    //   }
-
-    
   }
   else if(tokens[0].compare("QUERYSERVERS") == 0)
   {
-     //std::cout << "COMMAND " << tokens[0] << " not implemented." << std::endl;
      std::string reply;
+     
 
+     // Iterate through our connected clients a and display their ID, IP address and port number.
      for(auto const& names : clients)
      {
         if (std::to_string(names.second->port) != "0")
@@ -511,8 +492,6 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
             reply += "\n";
         }
      }
-     // Reducing the msg length by 1 loses the excess "," - which
-     // granted is totally cheating.
      std::string tokenReply = addTokens(reply);
 
      send(clientSocket, tokenReply.c_str(), tokenReply.length(), 0);
@@ -541,8 +520,10 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   }
   else if ((tokens[0].compare("FETCH_MSGS") == 0) && (tokens.size() == 2))
   {
+     // If we receive a FETCH_MSGS we start by finding them in our messages map
      if (messages.count(tokens[1]) != 0)
-        {
+        { 
+            // Build a SEND_MSG command with the requested message and send it over the connection.
             std::string reply = "SEND_MSG,";
             reply += tokens[1];
             reply += ",";
@@ -582,7 +563,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   }
   else if ((tokens[0].compare("SEND_MSG") == 0))
   {
-
+    // If we get sent a SEND_MSG command we store them in the message map under our group id
+    // Later we have to send fetch command to our server to retrieve them.
     messages[tokens[1]].push_back(tokens[3]);
     
     
