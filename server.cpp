@@ -136,7 +136,7 @@ std::string sanitizeMessage(char* buffer)
     std::string message = buffer;
 
     // remove any new line if it exists in the command.
-    message.erase(remove(message.begin(), message.end(), '\n'), message.end());
+    message.erase(remove(message.begin(), message.end(), '\n'), message.cend());
 
     // Checking for the start token
     std::size_t index = message.find("\x01");
